@@ -1,72 +1,102 @@
-# LLM-Study-Assistant-Browser-Extension
+# LLM Study Assistant — Browser Extension
 
-LLM-Study-Assistant-Browser-Extension is a browser extension for legitimate study help on Smartbook-style pages. The extension reads the current question, sends it to your chosen LLM assistant, and returns guided support directly inside the page so you can think through the problem yourself, acting as a guide/teacher.
+A Chrome extension that acts as an in-page study coach for McGraw-Hill Smartbook questions. It reads the current question, sends it to your chosen LLM assistant, and injects structured guided support directly into the page — helping you reason through problems yourself rather than just getting answers.
 
-## What It Does Now
+---
 
-The extension now focuses on:
+## How It Works
 
-- explaining the concept behind a question
-- breaking down reasoning into short steps
-- suggesting what to check next
-- optionally showing a possible answer as something to verify yourself
+The extension uses a **cross-tab coordination architecture**: a background service worker monitors open LLM assistant tabs (ChatGPT, Gemini, or DeepSeek) and relays structured JSON guidance back to the active study page — no page reload required.
 
-## Study-First Workflow
+```
+Study Page (mheducation.com)
+    └── content-script detects question + type
+    └── sends to background service worker
+            └── routes to open LLM assistant tab
+            └── injects structured prompt
+            └── receives JSON guidance response
+    └── renders in-page study panel
+```
 
-1. Open a supported Smartbook question.
-2. Open ChatGPT, Gemini, or DeepSeek in another tab.
-3. Click `Guide with ...` inside the study page.
-4. Review the returned study panel.
-5. Use the guidance to reason through the answer yourself before submitting anything.
+---
 
-## Guided Support Features
+## Features
 
-- In-page study guidance panel instead of auto-filling responses
-- Concept summaries for the current question
-- Hints and reasoning steps
-- Self-check and confidence-check guidance
-- Optional possible-answer output framed as something to verify, not blindly submit
-- Support for multiple choice, true/false, fill-in-the-blank, select-text, and matching-style question parsing
+- **In-page guidance panel** — study support renders directly inside the Smartbook page
+- **Multi-provider support** — works with ChatGPT, Gemini, and DeepSeek via their web apps (no API key required)
+- **5 question format parsers** — handles multiple choice, true/false, fill-in-the-blank, select-text, and matching
+- **Structured JSON responses** — LLM output is normalized into consistent fields: `summary`, `hint`, `reasoning_steps`, `next_step`, `self_check`, and `possible_answer`
+- **Study-coach prompting** — provider-specific prompt templates instruct the LLM to guide reasoning, not just supply answers
+- **Popup provider switcher** — switch between assistants from the extension popup without touching any code
 
-## Supported AI Assistants
-
-- ChatGPT
-- Gemini
-- DeepSeek
-
-The extension uses the assistant web apps you already have open in the browser and asks them for structured study guidance.
-
-## Recent Changes
-
-- Updated provider prompts so the LLM behaves like a study coach
-- Added structured JSON guidance responses with fields for summary, hint, reasoning steps, next step, self-check, and possible answer
-- Improved the project documentation to reflect an educational use case
-- Preserved multi-provider support and existing question parsing improvements
-- Kept the stronger DeepSeek and OpenAI/ChatGPT integration paths already added in the project
+---
 
 ## Supported Pages
 
 - `learning.mheducation.com`
 - `ezto.mheducation.com`
 
+---
+
 ## Architecture
 
-```text
-assets/           Extension icons and UI assets
-background/       Cross-tab coordination between study pages and assistant tabs
-content-scripts/  Smartbook page handlers plus provider-specific assistant prompts
-popup/            Provider selection and version/update UI
-manifest.json     Chrome extension manifest
 ```
+assets/             Extension icons and UI assets
+background/         Service worker — cross-tab coordination and message routing
+content-scripts/    Per-page question parsers and provider-specific prompt injection
+popup/              Provider selection UI and version info
+manifest.json       Chrome Manifest V3 config
+```
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Extension runtime | Chrome Extensions (Manifest V3) |
+| Background coordination | Service Worker API, Chrome Message Passing |
+| Content scripts | Vanilla JavaScript, DOM API |
+| Prompt engineering | Structured JSON templates per provider |
+| Supported LLMs | ChatGPT, Gemini, DeepSeek |
+
+---
 
 ## Installation
 
-1. Clone this repository or download it as a ZIP.
-2. Open `chrome://extensions/` in Chrome.
-3. Enable `Developer mode`.
-4. Click `Load unpacked`.
-5. Select the project folder.
-## Repository
+1. Clone this repo or download it as a ZIP
+2. Go to `chrome://extensions/` in Chrome
+3. Enable **Developer mode** (top right)
+4. Click **Load unpacked**
+5. Select the project folder
 
-- Repo: [gokulsivaji03-svg/LLM-Study-Assistant-Browser-Extension](https://github.com/gokulsivaji03-svg/LLM-Study-Assistant-Browser-Extension)
-- Issues: [Report bugs or request improvements](https://github.com/gokulsivaji03-svg/LLM-Study-Assistant-Browser-Extension/issues)
+---
+
+## Usage
+
+1. Open a supported Smartbook question page
+2. Open ChatGPT, Gemini, or DeepSeek in another tab and log in
+3. Select your preferred provider in the extension popup
+4. Click **Guide with [provider]** on the study page
+5. Read the guidance panel and work through the problem yourself
+
+---
+
+## Guidance Panel Output
+
+Each response from the LLM is parsed into structured fields:
+
+| Field | Description |
+|---|---|
+| `summary` | Brief concept explanation relevant to the question |
+| `hint` | A directional nudge without giving away the answer |
+| `reasoning_steps` | Step-by-step breakdown of how to approach the problem |
+| `next_step` | What to do or check next |
+| `self_check` | A prompt to verify your own reasoning |
+| `possible_answer` | Optional — framed as something to verify, not copy |
+
+---
+
+## Project Structure Notes
+
+Provider-specific logic lives in `content-scripts/` — each provider has its own prompt injection and response parser to handle differences in DOM structure across LLM web apps. The background service worker handles message passing between tabs using Chrome's `runtime.sendMessage` and `tabs` APIs.
