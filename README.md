@@ -41,8 +41,7 @@ The extension uses the assistant web apps you already have open in the browser a
 
 ## Recent Changes
 
-- Reworked the extension around guided study help instead of direct answer application
-- Updated provider prompts so the LLM behaves like a study coach rather than an answer bot
+- Updated provider prompts so the LLM behaves like a study coach
 - Added structured JSON guidance responses with fields for summary, hint, reasoning steps, next step, self-check, and possible answer
 - Replaced answer-first popup copy with legitimate study-support messaging
 - Improved the project documentation to reflect an educational use case
@@ -71,16 +70,6 @@ manifest.json     Chrome extension manifest
 3. Enable `Developer mode`.
 4. Click `Load unpacked`.
 5. Select the project folder.
-
-## Responsible Use
-
-This extension is intended to support learning, review, and guided reasoning.
-
-- Use it to understand concepts, compare approaches, and check your thinking.
-- Review every suggestion yourself before answering.
-- Follow your institution's academic integrity policies.
-- Do not treat the generated guidance as a substitute for learning the material.
-
 ## Repository
 
 - Repo: [gokulsivaji03-svg/LLM-Study-Assistant-Browser-Extension](https://github.com/gokulsivaji03-svg/LLM-Study-Assistant-Browser-Extension)
