@@ -1,6 +1,6 @@
 # LLM-Study-Assistant-Browser-Extension
 
-LLM-Study-Assistant-Browser-Extension is a browser extension for legitimate study help on Smartbook-style pages. Instead of silently filling answers, it reads the current question, sends it to your chosen LLM assistant, and returns guided support directly inside the page so you can think through the problem yourself.
+LLM-Study-Assistant-Browser-Extension is a browser extension for legitimate study help on Smartbook-style pages. The extension reads the current question, sends it to your chosen LLM assistant, and returns guided support directly inside the page so you can think through the problem yourself, acting as a guide/teacher.
 
 ## What It Does Now
 
