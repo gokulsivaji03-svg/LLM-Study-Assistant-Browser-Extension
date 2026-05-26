@@ -1,6 +1,4 @@
-# StudyAI
-
-![StudyAI icon](assets/icon.png)
+# LLM-Study-Assistant-Browser-Extension
 
 StudyAI is a browser extension built for Smartbook-style study workflows. It reads questions directly from supported assignment pages, sends them to your selected AI assistant, parses the answer into structured JSON, and applies the result back into the page with less manual clicking and less context switching.
 
