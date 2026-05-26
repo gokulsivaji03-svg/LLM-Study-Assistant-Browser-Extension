@@ -73,4 +73,4 @@ manifest.json     Chrome extension manifest
 
 ## Issues
 
-Bug reports and improvement ideas are welcome through the [issue tracker](https://github.com/gokulsivaji03-svg/auto-mcgraw/issues).
+Bug reports and improvement ideas are welcome through the issue tracker for the new `smartbook-workflow-assistant` repository.
