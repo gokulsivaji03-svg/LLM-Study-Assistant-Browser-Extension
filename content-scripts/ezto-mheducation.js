@@ -1,5 +1,5 @@
 let messageListener = null;
-let isAutomating = false;
+let isRequestInFlight = false;
 let lastIncorrectQuestion = null;
 let lastCorrectAnswer = null;
 let buttonAdded = false;
@@ -11,7 +11,7 @@ function setupMessageListener() {
 
   messageListener = (message, sender, sendResponse) => {
     if (message.type === "processChatGPTResponse") {
-      processChatGPTResponse(message.response);
+      processStudyGuidance(message.response);
       sendResponse({ received: true });
       return true;
     }
@@ -60,27 +60,7 @@ function startPageObserver() {
   checkForQuizAndAddButton();
 }
 
-function checkForQuizEnd() {
-  const progressInfo = document.querySelector(".footer__progress__heading");
-
-  if (progressInfo) {
-    const progressText = progressInfo.textContent;
-    const match = progressText.match(/(\d+)\s+of\s+(\d+)/);
-    if (match) {
-      const current = parseInt(match[1]);
-      const total = parseInt(match[2]);
-      if (current > total) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-function stopAutomation(reason = "Quiz completed") {
-  isAutomating = false;
-
+function updateButtonState() {
   chrome.storage.sync.get("aiModel", function (data) {
     const currentModel = data.aiModel || "chatgpt";
     let currentModelName = "ChatGPT";
@@ -93,25 +73,27 @@ function stopAutomation(reason = "Quiz completed") {
 
     const btn = document.querySelector(".header__automcgraw--main");
     if (btn) {
-      btn.textContent = `Ask ${currentModelName}`;
+      btn.textContent = isRequestInFlight
+        ? "Getting Guidance..."
+        : `Guide with ${currentModelName}`;
     }
   });
-
-  alert(`Automation stopped: ${reason}`);
 }
 
-function checkForNextStep() {
-  if (!isAutomating) return;
-
+function requestGuidance() {
   const questionData = parseQuestion();
-  if (questionData) {
-    chrome.runtime.sendMessage({
-      type: "sendQuestionToChatGPT",
-      question: questionData,
-    });
-  } else {
-    stopAutomation("No question found or question type not supported");
+  if (!questionData) {
+    alert("No supported question was found on the page.");
+    return;
   }
+
+  isRequestInFlight = true;
+  updateButtonState();
+
+  chrome.runtime.sendMessage({
+    type: "sendQuestionToChatGPT",
+    question: questionData,
+  });
 }
 
 function parseQuestion() {
@@ -137,7 +119,6 @@ function parseQuestion() {
     options = ["True", "False"];
   } else if (document.querySelector(".answers-wrap.input-response")) {
     questionType = "fill_in_the_blank";
-    options = [];
   } else {
     return null;
   }
@@ -168,7 +149,7 @@ function parseQuestion() {
   return {
     type: questionType,
     question: questionText,
-    options: options,
+    options,
     previousCorrection: lastIncorrectQuestion
       ? {
           question: lastIncorrectQuestion,
@@ -178,113 +159,154 @@ function parseQuestion() {
   };
 }
 
-function processChatGPTResponse(responseText) {
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function normalizeTextValue(value) {
+  if (Array.isArray(value)) {
+    return value.filter(Boolean).join(", ");
+  }
+  if (typeof value === "string") {
+    return value.trim();
+  }
+  return "";
+}
+
+function normalizeStepList(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+  if (typeof value === "string" && value.trim()) {
+    return [value.trim()];
+  }
+  return [];
+}
+
+function normalizeStudyGuide(raw) {
+  return {
+    conceptSummary: normalizeTextValue(
+      raw.conceptSummary || raw.summary || raw.explanation
+    ),
+    hint: normalizeTextValue(raw.hint),
+    reasoningSteps: normalizeStepList(raw.reasoningSteps || raw.steps),
+    nextStep: normalizeTextValue(raw.nextStep || raw.next_step),
+    confidenceCheck: normalizeTextValue(
+      raw.confidenceCheck || raw.checkYourWork || raw.selfCheck
+    ),
+    possibleAnswer: normalizeTextValue(raw.possibleAnswer || raw.answer),
+  };
+}
+
+function renderStudyGuide(questionElement, guide) {
+  if (!questionElement) return;
+
+  let panel = document.querySelector(".llm-study-guide-panel");
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.className = "llm-study-guide-panel";
+    panel.style.cssText = `
+      margin: 16px 0;
+      padding: 16px;
+      border: 1px solid #d7e3ff;
+      border-radius: 12px;
+      background: #f7fbff;
+      color: #1d2a39;
+      box-shadow: 0 8px 24px rgba(34, 78, 129, 0.08);
+    `;
+    questionElement.insertAdjacentElement("afterend", panel);
+  }
+
+  const sections = [];
+
+  if (guide.conceptSummary) {
+    sections.push(`
+      <div style="margin-top:12px;">
+        <strong>Concept Summary</strong>
+        <p style="margin:6px 0 0;">${escapeHtml(guide.conceptSummary)}</p>
+      </div>
+    `);
+  }
+
+  if (guide.hint) {
+    sections.push(`
+      <div style="margin-top:12px;">
+        <strong>Hint</strong>
+        <p style="margin:6px 0 0;">${escapeHtml(guide.hint)}</p>
+      </div>
+    `);
+  }
+
+  if (guide.reasoningSteps.length) {
+    sections.push(`
+      <div style="margin-top:12px;">
+        <strong>How To Think Through It</strong>
+        <ol style="margin:6px 0 0 18px; padding:0;">
+          ${guide.reasoningSteps
+            .map((step) => `<li style="margin:4px 0;">${escapeHtml(step)}</li>`)
+            .join("")}
+        </ol>
+      </div>
+    `);
+  }
+
+  if (guide.nextStep) {
+    sections.push(`
+      <div style="margin-top:12px;">
+        <strong>Next Step</strong>
+        <p style="margin:6px 0 0;">${escapeHtml(guide.nextStep)}</p>
+      </div>
+    `);
+  }
+
+  if (guide.confidenceCheck) {
+    sections.push(`
+      <div style="margin-top:12px;">
+        <strong>Check Your Work</strong>
+        <p style="margin:6px 0 0;">${escapeHtml(guide.confidenceCheck)}</p>
+      </div>
+    `);
+  }
+
+  if (guide.possibleAnswer) {
+    sections.push(`
+      <div style="margin-top:12px;">
+        <strong>Possible Answer To Verify Yourself</strong>
+        <p style="margin:6px 0 0;">${escapeHtml(guide.possibleAnswer)}</p>
+      </div>
+    `);
+  }
+
+  panel.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+      <div>
+        <strong style="font-size:16px;">Study Guidance</strong>
+        <p style="margin:4px 0 0; font-size:13px; color:#4a617a;">
+          Review the reasoning below and decide on the answer yourself.
+        </p>
+      </div>
+    </div>
+    ${sections.join("") || '<p style="margin:12px 0 0;">No study guidance was returned.</p>'}
+  `;
+}
+
+function processStudyGuidance(responseText) {
   try {
-
     const response = JSON.parse(responseText);
-    const answer = response.answer;
-
-    if (document.querySelector(".answers-wrap.multiple-choice")) {
-      handleMultipleChoiceAnswer(answer);
-    } else if (document.querySelector(".answers-wrap.boolean")) {
-      handleTrueFalseAnswer(answer);
-    } else if (document.querySelector(".answers-wrap.input-response")) {
-      handleFillInTheBlankAnswer(answer);
-    }
-
-    if (isAutomating) {
-      setTimeout(() => {
-        const nextButton = document.querySelector(
-          ".footer__link--next:not([hidden])"
-        );
-        if (
-          nextButton &&
-          !nextButton.disabled &&
-          !nextButton.classList.contains("is-disabled")
-        ) {
-          nextButton.click();
-          setTimeout(() => {
-            if (checkForQuizEnd()) {
-              stopAutomation("Quiz completed - all questions answered");
-              return;
-            }
-            checkForNextStep();
-          }, 1500);
-        } else {
-          stopAutomation("Quiz completed - no next button available");
-        }
-      }, 2000);
-    }
+    const guide = normalizeStudyGuide(response);
+    const questionElement = document.querySelector(".question");
+    renderStudyGuide(questionElement, guide);
   } catch (e) {
-    console.error("Error processing response:", e);
-    stopAutomation("Error processing AI response: " + e.message);
-  }
-}
-
-function handleMultipleChoiceAnswer(answer) {
-  const radioButtons = document.querySelectorAll(
-    '.answers--mc input[type="radio"]'
-  );
-  const labels = document.querySelectorAll(".answers--mc .answer__label--mc");
-
-  for (let i = 0; i < labels.length; i++) {
-    const labelText = labels[i].textContent.trim().replace(/^[a-z]\s+/, "");
-
-    if (
-      labelText === answer ||
-      labelText.replace(/\.$/, "") === answer.replace(/\.$/, "") ||
-      labelText.includes(answer) ||
-      answer.includes(labelText)
-    ) {
-      radioButtons[i].click();
-      break;
-    }
-  }
-}
-
-function handleTrueFalseAnswer(answer) {
-  const buttons = document.querySelectorAll(".answer--boolean");
-
-  for (const button of buttons) {
-    const buttonSpan = button.querySelector(".answer__button--boolean");
-    if (!buttonSpan) {
-      continue;
-    }
-    
-    const fullText = buttonSpan.textContent;
-    
-    const buttonText = fullText.trim().split(",")[0].trim();
-
-    if (
-      (buttonText === "True" && (answer === "True" || answer === true)) ||
-      (buttonText === "False" && (answer === "False" || answer === false))
-    ) {
-      button.click();
-      return;
-    }
-  }
-  
-  console.error("No matching button found for answer:", answer);
-}
-
-function handleFillInTheBlankAnswer(answer) {
-  const inputField = document.querySelector(".answer--input__input");
-
-  if (inputField) {
-    let answerText = "";
-
-    if (Array.isArray(answer)) {
-      answerText = answer[0];
-    } else {
-      answerText = answer;
-    }
-
-    inputField.value = answerText;
-    inputField.dispatchEvent(new Event("input", { bubbles: true }));
-    inputField.dispatchEvent(new Event("change", { bubbles: true }));
-
-  } else {
-    console.error("Could not find input field for fill in the blank");
+    console.error("Error processing study guidance:", e);
+    alert("Unable to parse study guidance from the AI response.");
+  } finally {
+    isRequestInFlight = false;
+    updateButtonState();
   }
 }
 
@@ -311,7 +333,7 @@ function addAssistantButton() {
     }
 
     const btn = document.createElement("button");
-    btn.textContent = `Ask ${modelName}`;
+    btn.textContent = `Guide with ${modelName}`;
     btn.type = "button";
     btn.className = "header__automcgraw--main";
     btn.style.cssText = `
@@ -341,25 +363,27 @@ function addAssistantButton() {
     });
 
     btn.addEventListener("click", () => {
-      if (isAutomating) {
-        stopAutomation("Manual stop");
-      } else {
-        const proceed = confirm(
-          "Start quiz automation? The automation will stop automatically when the quiz ends.\n\nClick OK to begin, or Cancel to stop."
-        );
-        if (proceed) {
-          isAutomating = true;
-          btn.textContent = "Stop Automation";
-          checkForNextStep();
-        }
+      if (isRequestInFlight) {
+        return;
+      }
+
+      const proceed = confirm(
+        "Generate study guidance for this question?\n\nUse the explanation to reason through the answer yourself."
+      );
+
+      if (proceed) {
+        requestGuidance();
       }
     });
 
     const settingsBtn = document.createElement("button");
     settingsBtn.type = "button";
     settingsBtn.className = "header__automcgraw--settings";
-    settingsBtn.title = "StudyAI Settings";
-    settingsBtn.setAttribute("aria-label", "StudyAI Settings");
+    settingsBtn.title = "LLM-Study-Assistant-Browser-Extension Settings";
+    settingsBtn.setAttribute(
+      "aria-label",
+      "LLM-Study-Assistant-Browser-Extension Settings"
+    );
     settingsBtn.style.cssText = `
       background: #fff;
       border: 1px solid #ccc;
@@ -400,45 +424,12 @@ function addAssistantButton() {
     helpLink.parentNode.insertBefore(buttonContainer, helpLink);
 
     chrome.storage.onChanged.addListener((changes) => {
-      if (changes.aiModel) {
-        const newModel = changes.aiModel.newValue;
-        let newModelName = "ChatGPT";
-
-        if (newModel === "gemini") {
-          newModelName = "Gemini";
-        } else if (newModel === "deepseek") {
-          newModelName = "DeepSeek";
-        }
-
-        if (!isAutomating) {
-          btn.textContent = `Ask ${newModelName}`;
-        }
+      if (changes.aiModel && !isRequestInFlight) {
+        updateButtonState();
       }
     });
   });
 }
 
-function waitForElement(selector, timeout = 5000) {
-  return new Promise((resolve, reject) => {
-    const startTime = Date.now();
-    const interval = setInterval(() => {
-      const el = document.querySelector(selector);
-      if (el) {
-        clearInterval(interval);
-        resolve(el);
-      } else if (Date.now() - startTime > timeout) {
-        clearInterval(interval);
-        reject(new Error("Element not found: " + selector));
-      }
-    }, 100);
-  });
-}
-
 setupMessageListener();
 startPageObserver();
-
-if (isAutomating) {
-  setTimeout(() => {
-    checkForNextStep();
-  }, 1000);
-}

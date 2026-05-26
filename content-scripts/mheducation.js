@@ -54,18 +54,9 @@ function setupMessageListener() {
     }
 
     if (message.type === "processChatGPTResponse") {
-      if (
-        doubleCreditMode &&
-        !message.isDuplicateTab &&
-        !waitingForDuplicateCompletion
-      ) {
-        currentResponse = message.response;
-        processDoubleCreditResponse(message.response);
-      } else {
-        void processChatGPTResponse(message.response).catch((error) => {
-          handleProcessResponseError(error);
-        });
-      }
+      void processChatGPTResponse(message.response).catch((error) => {
+        handleProcessResponseError(error);
+      });
       sendResponse({ received: true });
       return true;
     }
@@ -101,9 +92,8 @@ function setupMessageListener() {
 }
 
 function updateButtonState() {
-  chrome.storage.sync.get(["aiModel", "doubleCreditMode"], function (data) {
+  chrome.storage.sync.get(["aiModel"], function (data) {
     const currentModel = data.aiModel || "chatgpt";
-    const doubleMode = data.doubleCreditMode || false;
     let currentModelName = "ChatGPT";
 
     if (currentModel === "gemini") {
@@ -114,7 +104,9 @@ function updateButtonState() {
 
     const btn = document.querySelector(".automcgraw-btn");
     if (btn) {
-      btn.textContent = `Ask ${currentModelName}${doubleMode ? " (2x)" : ""}`;
+      btn.textContent = isAutomating
+        ? "Getting Guidance..."
+        : `Guide with ${currentModelName}`;
     }
   });
 }
@@ -125,6 +117,7 @@ function handleProcessResponseError(error) {
   waitingForDuplicateCompletion = false;
   clearMatchingPauseWatcher();
   updateButtonState();
+  alert("Unable to generate study guidance for this question.");
 }
 
 function processDoubleCreditResponse(responseText) {
@@ -1554,114 +1547,158 @@ function normalizeResponseAnswers(rawAnswer, questionType, container) {
   return dedupeAnswers(flattenedAnswers);
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function normalizeTextValue(value) {
+  if (Array.isArray(value)) {
+    return value.filter(Boolean).join(", ");
+  }
+  if (typeof value === "string") {
+    return value.trim();
+  }
+  return "";
+}
+
+function normalizeStepList(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+  if (typeof value === "string" && value.trim()) {
+    return [value.trim()];
+  }
+  return [];
+}
+
+function normalizeStudyGuide(raw) {
+  return {
+    conceptSummary: normalizeTextValue(
+      raw.conceptSummary || raw.summary || raw.explanation
+    ),
+    hint: normalizeTextValue(raw.hint),
+    reasoningSteps: normalizeStepList(raw.reasoningSteps || raw.steps),
+    nextStep: normalizeTextValue(raw.nextStep || raw.next_step),
+    confidenceCheck: normalizeTextValue(
+      raw.confidenceCheck || raw.checkYourWork || raw.selfCheck
+    ),
+    possibleAnswer: normalizeTextValue(raw.possibleAnswer || raw.answer),
+  };
+}
+
+function renderStudyGuide(container, guide) {
+  if (!container) return;
+
+  let panel = container.querySelector(".llm-study-guide-panel");
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.className = "llm-study-guide-panel";
+    panel.style.cssText = `
+      margin-top: 16px;
+      padding: 16px;
+      border: 1px solid #d7e3ff;
+      border-radius: 12px;
+      background: #f7fbff;
+      color: #1d2a39;
+      box-shadow: 0 8px 24px rgba(34, 78, 129, 0.08);
+    `;
+    const prompt = container.querySelector(".prompt");
+    if (prompt && prompt.parentNode) {
+      prompt.parentNode.insertBefore(panel, prompt.nextSibling);
+    } else {
+      container.prepend(panel);
+    }
+  }
+
+  const sections = [];
+
+  if (guide.conceptSummary) {
+    sections.push(`
+      <div style="margin-top:12px;">
+        <strong>Concept Summary</strong>
+        <p style="margin:6px 0 0;">${escapeHtml(guide.conceptSummary)}</p>
+      </div>
+    `);
+  }
+
+  if (guide.hint) {
+    sections.push(`
+      <div style="margin-top:12px;">
+        <strong>Hint</strong>
+        <p style="margin:6px 0 0;">${escapeHtml(guide.hint)}</p>
+      </div>
+    `);
+  }
+
+  if (guide.reasoningSteps.length) {
+    sections.push(`
+      <div style="margin-top:12px;">
+        <strong>How To Think Through It</strong>
+        <ol style="margin:6px 0 0 18px; padding:0;">
+          ${guide.reasoningSteps
+            .map((step) => `<li style="margin:4px 0;">${escapeHtml(step)}</li>`)
+            .join("")}
+        </ol>
+      </div>
+    `);
+  }
+
+  if (guide.nextStep) {
+    sections.push(`
+      <div style="margin-top:12px;">
+        <strong>Next Step</strong>
+        <p style="margin:6px 0 0;">${escapeHtml(guide.nextStep)}</p>
+      </div>
+    `);
+  }
+
+  if (guide.confidenceCheck) {
+    sections.push(`
+      <div style="margin-top:12px;">
+        <strong>Check Your Work</strong>
+        <p style="margin:6px 0 0;">${escapeHtml(guide.confidenceCheck)}</p>
+      </div>
+    `);
+  }
+
+  if (guide.possibleAnswer) {
+    sections.push(`
+      <div style="margin-top:12px;">
+        <strong>Possible Answer To Verify Yourself</strong>
+        <p style="margin:6px 0 0;">${escapeHtml(guide.possibleAnswer)}</p>
+      </div>
+    `);
+  }
+
+  panel.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+      <div>
+        <strong style="font-size:16px;">Study Guidance</strong>
+        <p style="margin:4px 0 0; font-size:13px; color:#4a617a;">
+          Review the reasoning below and decide on the answer yourself.
+        </p>
+      </div>
+    </div>
+    ${sections.join("") || '<p style="margin:12px 0 0;">No study guidance was returned.</p>'}
+  `;
+}
+
 async function processChatGPTResponse(responseText) {
-  if (handleTopicOverview()) {
-    return;
-  }
-
-  if (handleForcedLearning()) {
-    return;
-  }
-
   const container = document.querySelector(".probe-container");
   if (!container) return;
-  const questionType = detectQuestionType(container);
   const response = JSON.parse(responseText);
-  const answers = normalizeResponseAnswers(
-    response.answer,
-    questionType,
-    container
-  );
+  const guide = normalizeStudyGuide(response);
+  renderStudyGuide(container, guide);
 
-  lastIncorrectQuestion = null;
-  lastCorrectAnswer = null;
-
-  if (questionType === "matching") {
-    const applied = await applyMatchingAnswer(container, response.answer);
-    if (!applied) {
-      const questionSignature = getQuestionSignature(container);
-      alert(
-        "Matching Question Solution:\n\n" +
-          (answers.length ? answers.join("\n") : "No confident matches parsed.") +
-          "\n\nPlease input these matches manually, then click high confidence and next. Automation will resume after you move to the next question."
-      );
-
-      if (isAutomating) {
-        pauseForManualMatchingAndResume(questionSignature);
-      }
-
-      return;
-    }
-  } else if (questionType === "select_text") {
-    const choices = container.querySelectorAll(
-      ".select-text-component .choice.-interactive"
-    );
-
-    choices.forEach((choice) => {
-      const choiceText = choice.textContent.trim();
-      if (!choiceText) return;
-
-      const shouldBeSelected = answers.some((ans) =>
-        isAnswerMatch(choiceText, ans)
-      );
-
-      if (shouldBeSelected) {
-        choice.click();
-      }
-    });
-  } else {
-    fillInAnswers(answers, container);
-  }
-
-  if (isAutomating) {
-    if (pauseBeforeSubmit) {
-      waitForElement(".next-button", 120000)
-        .then((nextButton) => {
-          const observer = new MutationObserver(() => {
-            if (nextButton.offsetParent === null) {
-              observer.disconnect();
-              setTimeout(() => {
-                checkForNextStep();
-              }, 1000);
-            }
-          });
-          observer.observe(document.body, { childList: true, subtree: true });
-        })
-        .catch(() => {});
-    } else {
-      waitForElement(
-        getConfidenceSelector(),
-        10000
-      )
-        .then((button) => {
-          button.click();
-
-          setTimeout(() => {
-            checkForCorrectAnswer(container);
-
-            waitForElement(".next-button", 10000)
-              .then((nextButton) => {
-                nextButton.click();
-                setTimeout(() => {
-                  checkForNextStep();
-                }, 1000);
-              })
-              .catch((error) => {
-                console.error("Automation error:", error);
-                isAutomating = false;
-                clearMatchingPauseWatcher();
-                updateButtonState();
-              });
-          }, 1000);
-        })
-        .catch((error) => {
-          console.error("Automation error:", error);
-          isAutomating = false;
-          clearMatchingPauseWatcher();
-          updateButtonState();
-        });
-    }
-  }
+  isAutomating = false;
+  waitingForDuplicateCompletion = false;
+  clearMatchingPauseWatcher();
+  updateButtonState();
 }
 
 function addAssistantButton() {
@@ -1670,9 +1707,8 @@ function addAssistantButton() {
     buttonContainer.style.display = "flex";
     buttonContainer.style.marginLeft = "10px";
 
-    chrome.storage.sync.get(["aiModel", "doubleCreditMode"], function (data) {
+    chrome.storage.sync.get(["aiModel"], function (data) {
       const aiModel = data.aiModel || "chatgpt";
-      doubleCreditMode = data.doubleCreditMode || false;
       let modelName = "ChatGPT";
 
       if (aiModel === "gemini") {
@@ -1682,28 +1718,20 @@ function addAssistantButton() {
       }
 
       const btn = document.createElement("button");
-      btn.textContent = `Ask ${modelName}${doubleCreditMode ? " (2x)" : ""}`;
+      btn.textContent = `Guide with ${modelName}`;
       btn.classList.add("btn", "btn-secondary", "automcgraw-btn");
       btn.style.borderTopRightRadius = "0";
       btn.style.borderBottomRightRadius = "0";
       btn.addEventListener("click", () => {
         if (isAutomating) {
-          isAutomating = false;
-          waitingForDuplicateCompletion = false;
-          clearMatchingPauseWatcher();
-          chrome.runtime.sendMessage({ type: "resetTabTracking" });
-          updateButtonState();
+          return;
         } else {
-          const modeText = doubleCreditMode
-            ? " Double credit mode is enabled."
-            : "";
           const proceed = confirm(
-            `Start automated answering?${modeText} Click OK to begin, or Cancel to stop.`
+            "Generate study guidance for this question?\n\nUse the explanation to reason through the answer yourself."
           );
           if (proceed) {
             isAutomating = true;
-            clearMatchingPauseWatcher();
-            btn.textContent = "Stop Automation";
+            updateButtonState();
             checkForNextStep();
           }
         }
@@ -1731,26 +1759,8 @@ function addAssistantButton() {
       headerNav.appendChild(buttonContainer);
 
       chrome.storage.onChanged.addListener((changes) => {
-        if ((changes.aiModel || changes.doubleCreditMode) && !isAutomating) {
-          chrome.storage.sync.get(
-            ["aiModel", "doubleCreditMode"],
-            function (data) {
-              const newModel = data.aiModel || "chatgpt";
-              const doubleMode = data.doubleCreditMode || false;
-              doubleCreditMode = doubleMode;
-              let newModelName = "ChatGPT";
-
-              if (newModel === "gemini") {
-                newModelName = "Gemini";
-              } else if (newModel === "deepseek") {
-                newModelName = "DeepSeek";
-              }
-
-              btn.textContent = `Ask ${newModelName}${
-                doubleMode ? " (2x)" : ""
-              }`;
-            }
-          );
+        if (changes.aiModel && !isAutomating) {
+          updateButtonState();
         }
       });
     });

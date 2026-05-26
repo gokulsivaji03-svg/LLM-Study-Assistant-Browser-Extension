@@ -174,20 +174,21 @@ async function insertQuestion(questionData) {
       "\nChoices:\n" +
       options.choices.map((choice, i) => `${i + 1}. ${choice}`).join("\n");
     text +=
-      '\n\nPlease match each prompt with the correct choice. Set "answer" to an array of strings using the exact format \'Prompt -> Choice\'. Include one entry per prompt, use exact prompt and choice text, and use each choice at most once.';
+      "\n\nHelp the learner reason through the best matches. If you include a possible mapping, keep it brief and frame it as something to verify.";
   } else if (type === "fill_in_the_blank") {
     text +=
-      "\n\nThis is a fill in the blank question. If there are multiple blanks, provide answers as an array in order of appearance. For a single blank, you can provide a string.";
+      "\n\nThis is a fill in the blank question. Focus on the concept being tested, what clues to look for, and how to verify a possible completion.";
   } else if (options && options.length > 0) {
     text +=
       "\nOptions:\n" + options.map((opt, i) => `${i + 1}. ${opt}`).join("\n");
     text +=
-      "\n\nIMPORTANT: Your answer must EXACTLY match one of the above options. Do not include numbers in your answer. If there are periods, include them.";
+      "\n\nExplain which option cues matter most. If you include a possible answer, keep it short and present it as something the learner should verify.";
   }
 
   text +=
+    '\n\nYou are acting as a study coach. Help the learner understand the question before answering it.' +
     '\n\nIMPORTANT: Your answer should be in a JSON code block.' +
-    '\n\nPlease provide your answer in JSON format with keys "answer" and "explanation". Explanations should be no more than one sentence. DO NOT acknowledge the correction in your response, only answer the new question.';
+    '\n\nPlease provide JSON with these keys: "conceptSummary", "hint", "reasoningSteps", "nextStep", "confidenceCheck", and optional "possibleAnswer". "reasoningSteps" should be an array of short strings. Keep the guidance concise and do not write the response like a completed submission.';
 
   return new Promise((resolve, reject) => {
     const chatInput = findChatInput();
@@ -225,7 +226,19 @@ function processResponse(responseText) {
   try {
     const parsed = JSON.parse(cleanedText);
 
-    if (parsed && parsed.answer && !hasResponded) {
+    if (
+      parsed &&
+      (
+        parsed.conceptSummary ||
+        parsed.hint ||
+        parsed.reasoningSteps ||
+        parsed.nextStep ||
+        parsed.confidenceCheck ||
+        parsed.possibleAnswer ||
+        parsed.answer
+      ) &&
+      !hasResponded
+    ) {
       hasResponded = true;
       chrome.runtime
         .sendMessage({

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "StudyAI",
   "version": "2.4",
-  "description": "Automates Smartbook quiz workflows by routing questions to ChatGPT, Gemini, or DeepSeek and applying the returned answers in-page.",
+  "description": "Guides Smartbook study workflows by sending questions to ChatGPT, Gemini, or DeepSeek and returning structured hints, explanations, and review help.",
   "permissions": ["tabs", "scripting", "storage"],
   "host_permissions": [
     "https://learning.mheducation.com/*",

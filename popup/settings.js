@@ -68,28 +68,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  const doubleCreditToggle = document.getElementById("double-credit-toggle");
-  const randomConfidenceToggle = document.getElementById("random-confidence-toggle");
-  const pauseBeforeSubmitToggle = document.getElementById("pause-before-submit-toggle");
-
-  chrome.storage.sync.get(["doubleCreditMode", "randomConfidence", "pauseBeforeSubmit"], function (data) {
-    doubleCreditToggle.checked = data.doubleCreditMode || false;
-    randomConfidenceToggle.checked = data.randomConfidence || false;
-    pauseBeforeSubmitToggle.checked = data.pauseBeforeSubmit || false;
-  });
-
-  doubleCreditToggle.addEventListener("change", function () {
-    chrome.storage.sync.set({ doubleCreditMode: this.checked });
-  });
-
-  randomConfidenceToggle.addEventListener("change", function () {
-    chrome.storage.sync.set({ randomConfidence: this.checked });
-  });
-
-  pauseBeforeSubmitToggle.addEventListener("change", function () {
-    chrome.storage.sync.set({ pauseBeforeSubmit: this.checked });
-  });
-
   function checkModelAvailability(currentModel) {
     statusMessage.textContent = "Checking assistant availability...";
     statusMessage.className = "";
