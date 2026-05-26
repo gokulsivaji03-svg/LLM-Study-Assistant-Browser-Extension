@@ -7,7 +7,6 @@ LLM-Study-Assistant-Browser-Extension is a browser extension for legitimate stud
 The extension now focuses on:
 
 - explaining the concept behind a question
-- giving a useful hint instead of just a final answer
 - breaking down reasoning into short steps
 - suggesting what to check next
 - optionally showing a possible answer as something to verify yourself
