@@ -4,8 +4,6 @@ LLM-Study-Assistant-Browser-Extension is a browser extension for legitimate stud
 
 ## What It Does Now
 
-This project has been reworked away from answer automation and toward guided learning support.
-
 The extension now focuses on:
 
 - explaining the concept behind a question
@@ -43,7 +41,6 @@ The extension uses the assistant web apps you already have open in the browser a
 
 - Updated provider prompts so the LLM behaves like a study coach
 - Added structured JSON guidance responses with fields for summary, hint, reasoning steps, next step, self-check, and possible answer
-- Replaced answer-first popup copy with legitimate study-support messaging
 - Improved the project documentation to reflect an educational use case
 - Preserved multi-provider support and existing question parsing improvements
 - Kept the stronger DeepSeek and OpenAI/ChatGPT integration paths already added in the project
