@@ -358,8 +358,8 @@ function addAssistantButton() {
     const settingsBtn = document.createElement("button");
     settingsBtn.type = "button";
     settingsBtn.className = "header__automcgraw--settings";
-    settingsBtn.title = "Workflow Assistant Settings";
-    settingsBtn.setAttribute("aria-label", "Workflow Assistant Settings");
+    settingsBtn.title = "StudyAI Settings";
+    settingsBtn.setAttribute("aria-label", "StudyAI Settings");
     settingsBtn.style.cssText = `
       background: #fff;
       border: 1px solid #ccc;

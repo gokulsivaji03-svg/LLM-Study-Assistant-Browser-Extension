@@ -1715,7 +1715,7 @@ function addAssistantButton() {
       settingsBtn.style.borderBottomLeftRadius = "0";
       settingsBtn.style.borderLeft = "1px solid rgba(0,0,0,0.2)";
       settingsBtn.style.padding = "6px 10px";
-      settingsBtn.title = "Workflow Assistant Settings";
+      settingsBtn.title = "StudyAI Settings";
       settingsBtn.innerHTML = `
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"></circle>

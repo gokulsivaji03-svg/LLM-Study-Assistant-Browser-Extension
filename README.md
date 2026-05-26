@@ -1,8 +1,8 @@
-# Smartbook Workflow Assistant
+# StudyAI
 
-![Smartbook Workflow Assistant icon](assets/icon.png)
+![StudyAI icon](assets/icon.png)
 
-Smartbook Workflow Assistant is a Chrome extension for multi-tab Smartbook automation. It captures prompts from supported Smartbook pages, sends them to your selected AI assistant, normalizes the response into structured JSON, and applies the result back into the assignment flow.
+StudyAI is a Chrome extension for multi-tab Smartbook automation. It captures prompts from supported Smartbook pages, sends them to your selected AI assistant, normalizes the response into structured JSON, and applies the result back into the assignment flow.
 
 ## What Makes This Version Different
 
@@ -73,4 +73,4 @@ manifest.json     Chrome extension manifest
 
 ## Issues
 
-Bug reports and improvement ideas are welcome through the issue tracker for the new `smartbook-workflow-assistant` repository.
+Bug reports and improvement ideas are welcome through the [issue tracker](https://github.com/gokulsivaji03-svg/StudyAI/issues).
