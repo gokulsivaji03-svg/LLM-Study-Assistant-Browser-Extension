@@ -73,4 +73,4 @@ manifest.json     Chrome extension manifest
 
 ## Issues
 
-Bug reports and improvement ideas are welcome through the [issue tracker](https://github.com/gokulsivaji03-svg/StudyAI/issues).
+Bug reports and improvement ideas are welcome through the [issue tracker](https://github.com/gokulsivaji03-svg/LLM-Study-Assistant-Browser-Extension/issues).

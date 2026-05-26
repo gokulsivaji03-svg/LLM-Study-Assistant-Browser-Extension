@@ -160,7 +160,7 @@ document.addEventListener("DOMContentLoaded", function () {
       latestVersionElement.textContent = "Checking...";
 
       const response = await fetch(
-        "https://api.github.com/repos/gokulsivaji03-svg/StudyAI/releases/latest"
+        "https://api.github.com/repos/gokulsivaji03-svg/LLM-Study-Assistant-Browser-Extension/releases/latest"
       );
 
       if (response.status === 404) {
