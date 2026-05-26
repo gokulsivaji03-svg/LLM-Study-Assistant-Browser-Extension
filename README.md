@@ -2,58 +2,79 @@
 
 ![StudyAI icon](assets/icon.png)
 
-StudyAI is a Chrome extension for multi-tab Smartbook automation. It captures prompts from supported Smartbook pages, sends them to your selected AI assistant, normalizes the response into structured JSON, and applies the result back into the assignment flow.
+StudyAI is a browser extension built for Smartbook-style study workflows. It reads questions directly from supported assignment pages, sends them to your selected AI assistant, parses the answer into structured JSON, and applies the result back into the page with less manual clicking and less context switching.
 
-## What Makes This Version Different
+## Why This Project Exists
 
-This is no longer just a bare automation script. The current build behaves like a fuller workflow tool with provider switching, settings-driven modes, fallback handling, and recovery logic for messy quiz states.
+StudyAI is meant to turn a fragile browser script into a more complete study-assistant workflow:
 
-## Current Feature Set
+- multi-provider support
+- cleaner question parsing
+- better response handling
+- more recovery logic when the page flow gets messy
+- settings for different answering styles instead of one rigid automation path
+
+## Highlights
 
 - Supports both `learning.mheducation.com` and `ezto.mheducation.com`
-- Works with [ChatGPT](https://chatgpt.com), [Gemini](https://gemini.google.com), and [DeepSeek](https://chat.deepseek.com)
-- Routes answers through a background worker so Smartbook tabs and AI tabs stay coordinated
-- Handles multiple choice, true/false, fill-in-the-blank, select-text, and matching-style question flows
-- Parses model output as structured JSON instead of relying on plain-text matching only
-- Feeds previous corrections back into the next AI prompt after a wrong answer is detected
+- Works with OpenAI-powered ChatGPT, Gemini, and DeepSeek
+- Extracts question text and choices from the page automatically
+- Normalizes model output into JSON before applying answers
+- Handles multiple choice, true/false, fill-in-the-blank, select-text, and matching flows
+- Uses background tab coordination so Smartbook and assistant tabs stay in sync
+- Keeps track of prior corrections and feeds them into future prompts
 
-## Recent Improvements
+## Newer Additions And Improvements
 
-- Added `Double Credit Mode`, which uses duplicate tabs to complete the same answer flow twice when supported
-- Added `Randomize Confidence`, which rotates between confidence levels instead of always selecting the same one
-- Added `Pause Before Submit`, which fills answers and lets you manually handle confidence and next-step review
-- Improved matching-question behavior with attempted auto-application, manual fallback alerts, and automatic resume after you move on
-- Improved forced-learning handling so the extension can navigate reading and return-to-questions flows
-- Improved DeepSeek support with broader selector fallback and response detection
-- Improved release checking in the popup, including a clean state when no GitHub release exists yet
-- Fixed stale GitHub references from the old project identity
+- Added stronger OpenAI/ChatGPT and DeepSeek support in the assistant workflow
+- Added `Double Credit Mode` using duplicate-tab handling for supported flows
+- Added `Randomize Confidence` so confidence selection is not always identical
+- Added `Pause Before Submit` so answers can be filled while keeping the final step manual
+- Improved matching-question support with auto-apply attempts plus manual fallback and resume behavior
+- Improved forced-learning navigation so the extension can step through required reading flows
+- Improved provider response parsing with JSON-focused extraction logic
+- Improved popup update handling, including a clean state when no release is published yet
+- Fixed stale repo references and general workflow rough edges
+- Fixed a range of reliability issues around tab readiness, fallback selectors, and response timing
 
-## How It Works
+## Supported Workflow
 
-1. Open a supported Smartbook assignment page.
-2. Open one supported AI assistant in another tab.
-3. Choose the assistant and any optional modes in the popup settings.
-4. Start automation from the injected Smartbook button.
-5. The extension gathers the current question, sends a structured prompt to the selected provider, parses the JSON response, and applies the answer in-page.
+1. Open a supported Smartbook assignment.
+2. Open your preferred AI assistant in another tab.
+3. Choose the provider and any optional modes from the StudyAI settings popup.
+4. Start automation from the injected in-page button.
+5. Let the extension capture the current question, send a structured prompt, parse the response, and apply the answer back into the assignment flow.
 
-## Settings
+## Modes And Settings
 
-The popup currently includes:
+StudyAI currently includes:
 
-- AI provider selection for ChatGPT, Gemini, and DeepSeek
-- live assistant availability checks
+- Provider selection for ChatGPT, Gemini, and DeepSeek
+- live availability checks for the selected assistant tab
 - `Double Credit Mode`
 - `Randomize Confidence`
 - `Pause Before Submit`
-- current version and latest release status
+- current version and latest release visibility in the popup
 
-## Project Structure
+## Question Handling
+
+The extension currently supports:
+
+- multiple choice
+- true/false
+- fill-in-the-blank
+- select-text
+- matching questions with fallback recovery when strict automation is not reliable
+
+It also includes correction-aware prompting, so if an earlier answer is marked wrong and the correct answer is discovered, that information can be included in the next prompt.
+
+## Architecture
 
 ```text
 assets/           Extension icons and UI assets
 background/       Cross-tab coordination and tab lifecycle logic
-content-scripts/  Smartbook and provider-specific automation scripts
-popup/            Settings UI and update checker
+content-scripts/  Smartbook pages plus provider-specific assistant handlers
+popup/            Settings UI and release/update checker
 manifest.json     Chrome extension manifest
 ```
 
@@ -67,10 +88,12 @@ manifest.json     Chrome extension manifest
 
 ## Notes
 
-- This repository is the maintained source for the current extension.
+- This repository contains the maintained browser-extension version of StudyAI.
+- The current implementation integrates with assistant web apps in-browser.
 - The extension is not affiliated with McGraw Hill, OpenAI, Google, or DeepSeek.
 - Use it responsibly and follow the policies that apply to your coursework or institution.
 
-## Issues
+## Repository
 
-Bug reports and improvement ideas are welcome through the [issue tracker](https://github.com/gokulsivaji03-svg/LLM-Study-Assistant-Browser-Extension/issues).
+- Repo: [gokulsivaji03-svg/LLM-Study-Assistant-Browser-Extension](https://github.com/gokulsivaji03-svg/LLM-Study-Assistant-Browser-Extension)
+- Issues: [Report bugs or request improvements](https://github.com/gokulsivaji03-svg/LLM-Study-Assistant-Browser-Extension/issues)
